@@ -14,7 +14,7 @@ endif()
 # Configure SYCL compiler
 if(WIN32)
     add_custom_target(sycl_benchmark ALL
-        COMMAND cmd /c "icpx -fsycl -std=c++17 -L \"C:/Program Files (x86)/Intel/oneAPI/compiler/latest/lib\" -o ${CMAKE_BINARY_DIR}/bin/Debug/sycl_direct.exe sycl.cpp"
+        COMMAND cmd /c "icpx -fsycl -std=c++17 -L \"C:/Program Files (x86)/Intel/oneAPI/compiler/latest/lib\" -o ${CMAKE_BINARY_DIR}/bin/Debug/sycl_benchmark.exe sycl.cpp"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Building SYCL with Intel oneAPI"
         SOURCES sycl.cpp
