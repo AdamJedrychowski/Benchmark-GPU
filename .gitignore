@@ -1,4 +1,8 @@
 build
+IMN
+test
+tmp
+.vscode
 
 # Prerequisites
 *.d
