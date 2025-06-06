@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include "CL/opencl.hpp"
-#include "../Matrix.h"
+#include "../../Matrix.h"
 
 void numberOfEdgesAndTriads(Matrix<int> &a, long long &links, long long &triads)
 {

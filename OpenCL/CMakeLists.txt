@@ -5,9 +5,9 @@ GIT_REPOSITORY https://github.com/KhronosGroup/OpenCL-SDK.git
     GIT_TAG v2023.04.17
     GIT_SHALLOW ON
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -D BUILD_TESTING=OFF -D BUILD_DOCS=OFF -D OPENCL_SDK_BUILD_SAMPLES=OFF
-    BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release
-    # BUILD_COMMAND ""
-    # INSTALL_COMMAND ""
+    # BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
 )
 ExternalProject_Get_Property(OpenCL-build INSTALL_DIR)
 
@@ -36,9 +36,9 @@ add_definitions(-DCL_HPP_ENABLE_EXCEPTIONS)
 add_definitions(-DCL_HPP_TARGET_OPENCL_VERSION=300)
 
 function(add_opencl_benchmark name)
-    add_executable(${name} ${name}.cpp Matrix.h)
-    target_link_libraries(${name} PUBLIC OpenCL-sdk-lib)
-    set_target_properties(${name}
+    add_executable(${name}CL ${name}.cpp ../Matrix.h)
+    target_link_libraries(${name}CL PUBLIC OpenCL-sdk-lib)
+    set_target_properties(${name}CL
         PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     )
@@ -51,7 +51,7 @@ add_opencl_benchmark(ConjugateGradient)
 add_opencl_benchmark(FiniteDifferenceMethodsforPDEs)
 add_opencl_benchmark(JacobiGauss)
 add_opencl_benchmark(MapReduce)
-add_opencl_benchmark(MonteCarloSimulations)
+add_opencl_benchmark(MonteCarlo)
 # add_opencl_benchmark(SmoothedParticleHydrodynamics)
 
 add_opencl_benchmark(DeviceInfo)

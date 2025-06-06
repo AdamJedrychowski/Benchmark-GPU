@@ -3,7 +3,7 @@ set(Balancer_SOURCES
 )
 
 set(Balancer_HEADERS
-    ../Matrix.h
+    ../../Matrix.h
 )
 
 

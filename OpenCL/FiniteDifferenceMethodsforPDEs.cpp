@@ -4,7 +4,6 @@
 #include <vector>
 #include <cmath>
 
-using namespace std;
 
 // Parametry fizyczne i numeryczne
 const double alpha = 0.01;   // współczynnik przewodzenia ciepła
@@ -29,8 +28,8 @@ __kernel void heatEquation(__global double* u, __global double* u_next, const do
 )";
 
 int main() {
-    vector<double> u(Nx);
-    vector<double> u_next(Nx);
+    std::vector<double> u(Nx);
+    std::vector<double> u_next(Nx);
 
     // Inicjalizacja warunku początkowego
     for (int i = 0; i < Nx; ++i) {
@@ -76,14 +75,14 @@ int main() {
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         std::cout << "OpenCL heat equation solver completed in " << duration.count() << " ms" << std::endl;
 
-        cout << "x,u_final\n";
+        std::cout << "x,u_final\n";
         for (int i = 0; i < Nx; ++i) {
             double x = i * dx;
-            cout << x << "," << u[i] << "\n";
+            std::cout << x << "," << u[i] << "\n";
         }
 
     } catch (cl::Error& e) {
-        cerr << "OpenCL error: " << e.what() << "(" << e.err() << ")" << endl;
+        std::cout << "OpenCL error: " << e.what() << "(" << e.err() << ")" << std::endl;
         return 1;
     }
 

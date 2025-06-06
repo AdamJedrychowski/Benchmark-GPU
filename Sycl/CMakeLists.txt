@@ -13,13 +13,25 @@ endif()
 
 # Configure SYCL compiler
 if(WIN32)
-    add_custom_target(sycl_benchmark ALL
-        COMMAND cmd /c "icpx -fsycl -std=c++17 -L \"C:/Program Files (x86)/Intel/oneAPI/compiler/latest/lib\" -o ${CMAKE_BINARY_DIR}/bin/Debug/sycl_benchmark.exe sycl.cpp"
+function(add_sycl_benchmark name)
+    add_custom_target(${name}SYCL ALL
+        COMMAND cmd /c "icpx -fsycl -fsycl-targets=nvptx64-nvidia-cuda -std=c++17 -L \"C:/Program Files (x86)/Intel/oneAPI/compiler/latest/lib\" -o ${CMAKE_BINARY_DIR}/bin/Debug/${name}SYCL.exe ${name}.cpp"
+        COMMAND cmd /c "echo ${CMAKE_BINARY_DIR}/bin/Debug/${name}SYCL.exe"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Building SYCL with Intel oneAPI"
-        SOURCES sycl.cpp
-        BYPRODUCTS "${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/sycl_direct.exe"
+        SOURCES ${name}.cpp ../Matrix.h
+        BYPRODUCTS "${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/${name}SYCL.exe"
     )
+endfunction()
+
+add_sycl_benchmark(ConjugateGradient) # not working
+add_sycl_benchmark(sycl) # not working
+# add_sycl_benchmark(FiniteDifferenceMethodsforPDEs)
+# add_sycl_benchmark(JacobiGauss)
+# add_sycl_benchmark(MapReduce)
+# add_sycl_benchmark(MonteCarlo)
+# add_sycl_benchmark(PageRank)
+
 else()
     set(CMAKE_CXX_COMPILER "${ONEAPI_ROOT}/compiler/latest/linux/bin/icpx")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsycl -std=c++17")

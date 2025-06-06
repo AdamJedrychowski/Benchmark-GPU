@@ -4,7 +4,7 @@
 #include <cmath>
 #include <fstream>
 #include <sstream>
-#include "Matrix.h"
+#include "../Matrix.h"
 
 // OpenCL kernel for Jacobi Iteration
 const char* jacobiKernelSource = R"(
@@ -30,7 +30,7 @@ __kernel void jacobi(
 int main() {
     srand(static_cast<unsigned int>(time(0)));
     int n = 150;
-    Matrix A = Matrix::generateMatrixSystemEquations(n);
+    Matrix A = Matrix<float>::generateMatrixSystemEquations(n);
     std::vector<float> b(n);
     for (int i = 0; i < n; ++i) {
         b[i] = static_cast<float>(rand() % 1000000 + 1);
