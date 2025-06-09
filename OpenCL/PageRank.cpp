@@ -9,9 +9,9 @@
 #include <string>
 #include <sstream>
 #include <CL/opencl.hpp>
+#include "../Matrix.h"
 
-// OpenCL kernel as a string
-const char* pageRankKernelSource = R"(
+const char* kernelSource = R"(
 __kernel void pagerank_kernel(__global float* inRank,
                              __global float* outRank,
                              __global int* nodeOffsets,
@@ -96,7 +96,6 @@ public:
     }
 };
 
-// Generate a random graph for testing
 Graph generateRandomGraph(int numNodes, float edgeProbability) {
     Graph graph(numNodes);
     std::random_device rd;
@@ -110,8 +109,6 @@ Graph generateRandomGraph(int numNodes, float edgeProbability) {
             }
         }
     }
-    
-    // Ensure there are no dangling nodes which can cause numerical issues
     graph.handleDanglingNodes();
     
     return graph;
@@ -119,26 +116,10 @@ Graph generateRandomGraph(int numNodes, float edgeProbability) {
 
 int main() {
     // Parameters
-    int numNodes = 10000;
     float edgeProbability = 0.001f;
     float dampingFactor = 0.85f;
-    int maxIterations = 100;
-    float tolerance = 1e-6f;
-
-    // Generate random graph
-    std::cout << "Generating random graph with " << numNodes << " nodes..." << std::endl;
-    Graph graph = generateRandomGraph(numNodes, edgeProbability);
-
-    // Convert to CSR format
-    std::vector<int> nodeOffsets;
-    std::vector<int> nodeConnections;
-    std::vector<int> outDegrees;
-    graph.convertToCSR(nodeOffsets, nodeConnections, outDegrees);
-
-    // Initialize rank arrays
-    std::vector<float> initialRank(numNodes, 1.0f / numNodes);
-    std::vector<float> resultRank(numNodes);
-
+    int maxIterations = 1000;
+    
     try {
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
@@ -149,49 +130,56 @@ int main() {
         cl::Device device = devices.front();
         cl::Context context(device);
         cl::CommandQueue queue(context, device);
-
-        // Build the program
-        cl::Program program(context, pageRankKernelSource);
+        cl::Program program(context, kernelSource);
         program.build({device});
         cl::Kernel kernel(program, "pagerank_kernel");
 
-        // Create buffers
-        cl::Buffer inRankBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(float) * numNodes, initialRank.data());
-        cl::Buffer outRankBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * numNodes);
-        cl::Buffer nodeOffsetsBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(int) * (numNodes + 1), nodeOffsets.data());
-        cl::Buffer nodeConnectionsBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(int) * nodeConnections.size(), nodeConnections.data());
-        cl::Buffer outDegreesBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(int) * numNodes, outDegrees.data());
-        
-        kernel.setArg(2, nodeOffsetsBuffer);
-        kernel.setArg(3, nodeConnectionsBuffer);
-        kernel.setArg(4, outDegreesBuffer);
-        kernel.setArg(5, dampingFactor);
-        kernel.setArg(6, numNodes);
+        std::vector<int> nodes = {2500, 5000, 10000, 20000, 40000, 80000};
 
-        std::cout << "Starting OpenCL PageRank computation..." << std::endl;
+        for(int &numNodes : nodes) {
+            std::cout << "Generating random graph with " << numNodes << " nodes..." << std::endl;
+            Graph graph = generateRandomGraph(numNodes, edgeProbability);
 
-        // Measure OpenCL PageRank execution time
-        auto startTime = std::chrono::high_resolution_clock::now();
+            // Convert to CSR format
+            std::vector<int> nodeOffsets;
+            std::vector<int> nodeConnections;
+            std::vector<int> outDegrees;
+            graph.convertToCSR(nodeOffsets, nodeConnections, outDegrees);
 
-        for (int iter = 0; iter < maxIterations; iter++) {
+            // Initialize rank arrays
+            std::vector<float> initialRank(numNodes, 1.0f / numNodes);
+            std::vector<float> resultRank(numNodes);
+
+            cl::Buffer inRankBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(float) * numNodes, initialRank.data());
+            cl::Buffer outRankBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * numNodes);
+            cl::Buffer nodeOffsetsBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(int) * (numNodes + 1), nodeOffsets.data());
+            cl::Buffer nodeConnectionsBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(int) * nodeConnections.size(), nodeConnections.data());
+            cl::Buffer outDegreesBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(int) * numNodes, outDegrees.data());
+            
             kernel.setArg(0, inRankBuffer);
             kernel.setArg(1, outRankBuffer);
+            kernel.setArg(2, nodeOffsetsBuffer);
+            kernel.setArg(3, nodeConnectionsBuffer);
+            kernel.setArg(4, outDegreesBuffer);
+            kernel.setArg(5, dampingFactor);
+            kernel.setArg(6, numNodes);
 
-            // Execute kernel
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(numNodes), cl::NullRange);
-            queue.finish();
+            std::cout << "Starting OpenCL PageRank computation..." << std::endl;
+            auto startTime = std::chrono::high_resolution_clock::now();
 
-            // Swap input and output buffers for next iteration
-            std::swap(inRankBuffer, outRankBuffer);
+            for (int iter = 0; iter < maxIterations; iter++) {
+                queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(numNodes), cl::NullRange);
+                queue.enqueueCopyBuffer(outRankBuffer, inRankBuffer, 0, 0, sizeof(float) * numNodes);
+            }
+
+            queue.enqueueReadBuffer(inRankBuffer, CL_TRUE, 0, sizeof(float) * numNodes, resultRank.data());
+
+            auto endTime = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> duration = endTime - startTime;
+
+            std::cout << "OpenCL PageRank completed in " << duration.count() << " seconds." << std::endl;
+            saveDurationToFile("results/PageRank/OpenCL.txt", numNodes, duration.count());
         }
-
-        queue.enqueueReadBuffer(inRankBuffer, CL_TRUE, 0, sizeof(float) * numNodes, resultRank.data());
-
-        auto endTime = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-
-        std::cout << "OpenCL PageRank completed in " << duration.count() << " ms" << std::endl;
-
     } catch (const cl::Error& e) {
         std::cerr << "OpenCL error: " << e.what() << "(" << e.err() << ")" << std::endl;
         return 1;

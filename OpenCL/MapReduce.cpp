@@ -3,8 +3,8 @@
 #include <vector>
 #include <numeric>
 #include <algorithm>
+#include "../Matrix.h"
 
-// Kernel source
 const char* kernelSource = R"(
     __kernel void map(__global const int* input, __global int* output) {
         int id = get_global_id(0);
@@ -41,68 +41,61 @@ const char* kernelSource = R"(
     )";
 
 int main() {
-    // Input data
-    std::vector<int> input(131072);
-    int workGroupSize = 256, numWorkGroupSize = input.size() / workGroupSize;
-    for(auto& val : input) {
-        val = rand() % 100;
-    }
-
     try {
-        // Get all platforms (drivers)
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
         cl::Platform platform = platforms.front();
-
-        // Get all devices for the platform
         std::vector<cl::Device> devices;
         platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
 
         cl::Device device = devices.front();
         cl::Context context(device);
         cl::CommandQueue queue(context, device);
-
-        // Build the program
         cl::Program program(context, kernelSource);
         program.build({device});
-
-        // Buffers
-        cl::Buffer inputBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(int) * input.size(), input.data());
-        cl::Buffer outputBuffer(context, CL_MEM_READ_WRITE, sizeof(int) * input.size(), nullptr);
-        cl::Buffer resultBuffer(context, CL_MEM_WRITE_ONLY, sizeof(int) * numWorkGroupSize, nullptr);
-
-        // Map kernel
         cl::Kernel mapKernel(program, "map");
-        mapKernel.setArg(0, inputBuffer);
-        mapKernel.setArg(1, outputBuffer);
-
-        // Reduce kernel
         cl::Kernel reduceKernel(program, "reduce");
-        reduceKernel.setArg(0, outputBuffer);
-        reduceKernel.setArg(1, cl::Local(sizeof(int) * workGroupSize)); // Local memory size
-        reduceKernel.setArg(2, resultBuffer);
 
-        std::cout << "Running OpenCL MapReduce style data processing..." << std::endl;
-        auto startTime = std::chrono::high_resolution_clock::now();
+        std::vector<int> sizes = {33554432, 67108864, 134217728, 268435456, 536870912, 1073741824};
 
-        // Execute map kernel
-        cl::NDRange global(input.size());
-        cl::NDRange local(256);
-        queue.enqueueNDRangeKernel(mapKernel, cl::NullRange, global, local);
+        for(int &n : sizes) {
+            std::vector<int> input(n);
+            int workGroupSize = 256, numWorkGroupSize = n / workGroupSize;
+            
+            for(auto& val : input) {
+                val = rand() % 100;
+            }
 
-        // Execute reduce kernel
-        queue.enqueueNDRangeKernel(reduceKernel, cl::NullRange, global, local);
+            cl::Buffer inputBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(int) * n, input.data());
+            cl::Buffer outputBuffer(context, CL_MEM_READ_WRITE, sizeof(int) * n, nullptr);
+            cl::Buffer resultBuffer(context, CL_MEM_WRITE_ONLY, sizeof(int) * numWorkGroupSize, nullptr);
 
-        std::vector<int> results(numWorkGroupSize);
-        queue.enqueueReadBuffer(resultBuffer, CL_TRUE, 0, sizeof(int) * numWorkGroupSize, results.data());
+            mapKernel.setArg(0, inputBuffer);
+            mapKernel.setArg(1, outputBuffer);
 
-        auto endTime = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> duration = endTime - startTime;
-        std::cout << "OpenCL MapReduce style data processing completed in " << duration.count() << " seconds." << std::endl;
+            reduceKernel.setArg(0, outputBuffer);
+            reduceKernel.setArg(1, cl::Local(sizeof(int) * workGroupSize));
+            reduceKernel.setArg(2, resultBuffer);
 
-        int64_t result = std::accumulate(results.begin(), results.end(), (int64_t)0);
-        std::cout << "Reduction result: " << result << std::endl;
+            std::cout << "Running OpenCL MapReduce style data processing..." << std::endl;
+            auto startTime = std::chrono::high_resolution_clock::now();
 
+            cl::NDRange global(n);
+            cl::NDRange local(256);
+            queue.enqueueNDRangeKernel(mapKernel, cl::NullRange, global, local);
+            queue.enqueueNDRangeKernel(reduceKernel, cl::NullRange, global, local);
+
+            std::vector<int> results(numWorkGroupSize);
+            queue.enqueueReadBuffer(resultBuffer, CL_TRUE, 0, sizeof(int) * numWorkGroupSize, results.data());
+
+            auto endTime = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> duration = endTime - startTime;
+            std::cout << "OpenCL MapReduce style data processing completed in " << duration.count() << " seconds." << std::endl;
+            saveDurationToFile("results/MapReduce/OpenCL.txt", n, duration.count());
+
+            int64_t result = std::accumulate(results.begin(), results.end(), (int64_t)0);
+            std::cout << "Reduction result: " << result << std::endl;
+        }
     } catch (cl::Error& e) {
         std::cerr << "OpenCL error: " << e.what() << " (" << e.err() << ")" << std::endl;
         return 1;

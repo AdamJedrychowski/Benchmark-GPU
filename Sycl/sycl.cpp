@@ -124,6 +124,9 @@ int main() {
         
         // Get all platforms
         auto platforms = sycl::platform::get_platforms();
+        std::find_if(platforms.begin(), platforms.end(), [](const sycl::platform& p) {
+            return p.get_info<sycl::info::platform::name>().find("NVIDIA") != std::string::npos;
+        });
         std::cout << "Found " << platforms.size() << " platform(s)\n";
         
         int deviceCount = 0;
@@ -154,6 +157,9 @@ int main() {
         // Test with default queue
         std::cout << "\n--- Testing Default Queue ---\n";
         sycl::queue default_queue;
+        default_queue.
+
+
         std::cout << "Default device: " 
                   << default_queue.get_device().get_info<sycl::info::device::name>() << std::endl;
         

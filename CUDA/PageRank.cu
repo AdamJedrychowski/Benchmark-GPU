@@ -9,6 +9,7 @@
 #include <string>
 #include <sstream>
 #include <cuda_runtime.h>
+#include "../Matrix.h"
 
 // CUDA kernel for PageRank
 __global__ void pagerank_kernel(float* inRank, float* outRank, int* nodeOffsets, int* nodeConnections, int* outDegrees, float dampingFactor, int numNodes) {
@@ -99,63 +100,66 @@ Graph generateRandomGraph(int numNodes, float edgeProbability) {
 }
 
 int main() {
-    int numNodes = 10000;
     float edgeProbability = 0.001f;
     float dampingFactor = 0.85f;
-    int maxIterations = 100;
-    float tolerance = 1e-6f;
+    int maxIterations = 1000;
 
-    std::cout << "Generating random graph with " << numNodes << " nodes..." << std::endl;
-    Graph graph = generateRandomGraph(numNodes, edgeProbability);
+    std::vector<int> nodes = {2500, 5000, 10000, 20000, 40000, 80000};
 
-    std::vector<int> nodeOffsets;
-    std::vector<int> nodeConnections;
-    std::vector<int> outDegrees;
-    graph.convertToCSR(nodeOffsets, nodeConnections, outDegrees);
+    for(int &numNodes : nodes) {
+        std::cout << "Generating random graph with " << numNodes << " nodes..." << std::endl;
+        Graph graph = generateRandomGraph(numNodes, edgeProbability);
 
-    std::vector<float> initialRank(numNodes, 1.0f / numNodes);
-    std::vector<float> resultRank(numNodes);
+        std::vector<int> nodeOffsets;
+        std::vector<int> nodeConnections;
+        std::vector<int> outDegrees;
+        graph.convertToCSR(nodeOffsets, nodeConnections, outDegrees);
 
-    float *d_inRank, *d_outRank;
-    int *d_nodeOffsets, *d_nodeConnections, *d_outDegrees;
+        std::vector<float> initialRank(numNodes, 1.0f / numNodes);
+        std::vector<float> resultRank(numNodes);
 
-    cudaMalloc(&d_inRank, sizeof(float) * numNodes);
-    cudaMalloc(&d_outRank, sizeof(float) * numNodes);
-    cudaMalloc(&d_nodeOffsets, sizeof(int) * (numNodes + 1));
-    cudaMalloc(&d_nodeConnections, sizeof(int) * nodeConnections.size());
-    cudaMalloc(&d_outDegrees, sizeof(int) * numNodes);
+        float *d_inRank, *d_outRank;
+        int *d_nodeOffsets, *d_nodeConnections, *d_outDegrees;
 
-    cudaMemcpy(d_inRank, initialRank.data(), sizeof(float) * numNodes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_nodeOffsets, nodeOffsets.data(), sizeof(int) * (numNodes + 1), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_nodeConnections, nodeConnections.data(), sizeof(int) * nodeConnections.size(), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_outDegrees, outDegrees.data(), sizeof(int) * numNodes, cudaMemcpyHostToDevice);
+        cudaMalloc(&d_inRank, sizeof(float) * numNodes);
+        cudaMalloc(&d_outRank, sizeof(float) * numNodes);
+        cudaMalloc(&d_nodeOffsets, sizeof(int) * (numNodes + 1));
+        cudaMalloc(&d_nodeConnections, sizeof(int) * nodeConnections.size());
+        cudaMalloc(&d_outDegrees, sizeof(int) * numNodes);
 
-    int blockSize = 256;
-    int numBlocks = (numNodes + blockSize - 1) / blockSize;
+        cudaMemcpy(d_inRank, initialRank.data(), sizeof(float) * numNodes, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_nodeOffsets, nodeOffsets.data(), sizeof(int) * (numNodes + 1), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_nodeConnections, nodeConnections.data(), sizeof(int) * nodeConnections.size(), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_outDegrees, outDegrees.data(), sizeof(int) * numNodes, cudaMemcpyHostToDevice);
 
-    std::cout << "Starting CUDA PageRank computation..." << std::endl;
+        int blockSize = 256;
+        int numBlocks = (numNodes + blockSize - 1) / blockSize;
 
-    auto startTime = std::chrono::high_resolution_clock::now();
+        std::cout << "Starting CUDA PageRank computation..." << std::endl;
 
-    for (int iter = 0; iter < maxIterations; iter++) {
-        pagerank_kernel<<<numBlocks, blockSize>>>(d_inRank, d_outRank, d_nodeOffsets, d_nodeConnections, d_outDegrees, dampingFactor, numNodes);
-        cudaDeviceSynchronize();
+        auto startTime = std::chrono::high_resolution_clock::now();
 
-        std::swap(d_inRank, d_outRank);
+        for (int iter = 0; iter < maxIterations; iter++) {
+            pagerank_kernel<<<numBlocks, blockSize>>>(d_inRank, d_outRank, d_nodeOffsets, d_nodeConnections, d_outDegrees, dampingFactor, numNodes);
+            cudaDeviceSynchronize();
+
+            std::swap(d_inRank, d_outRank);
+        }
+
+        cudaMemcpy(resultRank.data(), d_inRank, sizeof(float) * numNodes, cudaMemcpyDeviceToHost);
+
+        auto endTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = endTime - startTime;
+
+        std::cout << "CUDA PageRank completed in " << duration.count() << " seconds." << std::endl;
+        saveDurationToFile("results/PageRank/CUDA.txt", numNodes, duration.count());
+
+        cudaFree(d_inRank);
+        cudaFree(d_outRank);
+        cudaFree(d_nodeOffsets);
+        cudaFree(d_nodeConnections);
+        cudaFree(d_outDegrees);
     }
-
-    cudaMemcpy(resultRank.data(), d_inRank, sizeof(float) * numNodes, cudaMemcpyDeviceToHost);
-
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-
-    std::cout << "CUDA PageRank completed in " << duration.count() << " ms" << std::endl;
-
-    cudaFree(d_inRank);
-    cudaFree(d_outRank);
-    cudaFree(d_nodeOffsets);
-    cudaFree(d_nodeConnections);
-    cudaFree(d_outDegrees);
 
     return 0;
 }

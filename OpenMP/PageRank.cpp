@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <numeric>
 #include <omp.h>
+#include "../Matrix.h"
 
 class Graph {
 public:
@@ -72,64 +73,63 @@ Graph generateRandomGraph(int numNodes, float edgeProbability) {
 }
 
 int main() {
-    int numNodes = 10000;
     float edgeProbability = 0.001f;
     float dampingFactor = 0.85f;
-    int maxIterations = 100;
+    int maxIterations = 1000;
     float tolerance = 1e-6f;
 
-    std::cout << "Generating random graph with " << numNodes << " nodes..." << std::endl;
-    Graph graph = generateRandomGraph(numNodes, edgeProbability);
+    std::vector<int> nodes = {2500, 5000, 10000, 20000, 40000, 80000};
 
-    std::vector<int> nodeOffsets;
-    std::vector<int> nodeConnections;
-    std::vector<int> outDegrees;
-    graph.convertToCSR(nodeOffsets, nodeConnections, outDegrees);
+    for(int &numNodes : nodes) {
+        std::cout << "Generating random graph with " << numNodes << " nodes..." << std::endl;
+        Graph graph = generateRandomGraph(numNodes, edgeProbability);
 
-    std::vector<float> inRank(numNodes, 1.0f / numNodes);
-    std::vector<float> outRank(numNodes);
+        std::vector<int> nodeOffsets;
+        std::vector<int> nodeConnections;
+        std::vector<int> outDegrees;
+        graph.convertToCSR(nodeOffsets, nodeConnections, outDegrees);
 
-    std::cout << "Starting OpenMP PageRank computation..." << std::endl;
+        std::vector<float> inRank(numNodes, 1.0f / numNodes);
+        std::vector<float> outRank(numNodes);
 
-    auto startTime = std::chrono::high_resolution_clock::now();
+        std::cout << "Starting OpenMP PageRank computation..." << std::endl;
 
-    for (int iter = 0; iter < maxIterations; iter++) {
-        #pragma omp parallel for
-        for (int nodeId = 0; nodeId < numNodes; nodeId++) {
-            float sum = 0.0f;
+        auto startTime = std::chrono::high_resolution_clock::now();
 
-            int start = nodeOffsets[nodeId];
-            int end = nodeOffsets[nodeId + 1];
+        for (int iter = 0; iter < maxIterations; iter++) {
+            #pragma omp parallel for
+            for (int nodeId = 0; nodeId < numNodes; nodeId++) {
+                float sum = 0.0f;
 
-            for (int i = start; i < end; i++) {
-                int sourceNode = nodeConnections[i];
-                if (outDegrees[sourceNode] > 0) {
-                    sum += inRank[sourceNode] / outDegrees[sourceNode];
-                } else {
-                    sum += inRank[sourceNode] / numNodes;
+                int start = nodeOffsets[nodeId];
+                int end = nodeOffsets[nodeId + 1];
+
+                for (int i = start; i < end; i++) {
+                    int sourceNode = nodeConnections[i];
+                    if (outDegrees[sourceNode] > 0) {
+                        sum += inRank[sourceNode] / outDegrees[sourceNode];
+                    } else {
+                        sum += inRank[sourceNode] / numNodes;
+                    }
                 }
+
+                outRank[nodeId] = (1.0f - dampingFactor) / numNodes + dampingFactor * sum;
             }
 
-            outRank[nodeId] = (1.0f - dampingFactor) / numNodes + dampingFactor * sum;
+            float diff = 0.0f;
+            #pragma omp parallel for reduction(+:diff)
+            for (int i = 0; i < numNodes; i++) {
+                diff += std::abs(outRank[i] - inRank[i]);
+                inRank[i] = outRank[i];
+            }
         }
 
-        float diff = 0.0f;
-        #pragma omp parallel for reduction(+:diff)
-        for (int i = 0; i < numNodes; i++) {
-            diff += std::abs(outRank[i] - inRank[i]);
-            inRank[i] = outRank[i];
-        }
+        auto endTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = endTime - startTime;
 
-        if (diff < tolerance) {
-            std::cout << "Converged after " << iter + 1 << " iterations." << std::endl;
-            break;
-        }
+        std::cout << "OpenMP PageRank completed in " << duration.count() << " seconds." << std::endl;
+        saveDurationToFile("results/PageRank/OpenMP.txt", numNodes, duration.count());
     }
-
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-
-    std::cout << "OpenMP PageRank completed in " << duration.count() << " ms" << std::endl;
 
     return 0;
 }

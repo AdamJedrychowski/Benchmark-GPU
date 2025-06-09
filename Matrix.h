@@ -6,6 +6,8 @@
 #include <cmath>
 #include <initializer_list>
 #include <stdexcept>
+#include <random>
+#include <filesystem>
 
 template<typename T=float>
 class Matrix {
@@ -58,22 +60,24 @@ public:
         return matrix;
     }
 
-    static Matrix generateMatrixSystemEquations(int N) {
-        Matrix<T> A(N);
-
-        // Create a diagonally dominant matrix A
+    static void generateMatrixSystemEquations(Matrix<T> &A) {
+        T* data = A.data();
+        const int N = A.m_N;
+        
+        std::mt19937 gen(std::random_device{}());
+        std::uniform_int_distribution<int> dis(1, 1000);
+        
         for (int i = 0; i < N; ++i) {
             T rowSum = 0.0f;
             for (int j = 0; j < N; ++j) {
                 if (i != j) {
-                    A(i, j) = static_cast<T>(rand() % 1000 + 1);
-                    rowSum += A(i, j);
+                    const T value = static_cast<T>(dis(gen));
+                    data[i * N + j] = value;
+                    rowSum += value;
                 }
             }
-            A(i, i) = rowSum + static_cast<T>(rand() % 1000 + 1); // Ensure diagonal dominance
+            data[i * N + i] = rowSum + static_cast<T>(dis(gen));
         }
-
-        return A;
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Matrix &print) {
@@ -90,3 +94,18 @@ private:
     int m_N;
     std::vector<T> tab;
 };
+
+void saveDurationToFile(const std::string &filename, double x, double duration) {
+    std::filesystem::path destPath(filename);
+    if(!std::filesystem::exists(destPath.parent_path())) {
+        std::filesystem::create_directories(destPath.parent_path());
+    }
+
+    std::ofstream file(filename, std::ios::app);
+    if (!file) {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return;
+    }
+    file << x << ";" << duration << std::endl;
+    file.close();
+}

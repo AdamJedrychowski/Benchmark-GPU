@@ -3,6 +3,7 @@ IMN
 test
 tmp
 .vscode
+results
 
 # Prerequisites
 *.d

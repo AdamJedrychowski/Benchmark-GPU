@@ -45,14 +45,10 @@ function(add_opencl_benchmark name)
 endfunction()
 
 add_opencl_benchmark(PageRank)
-# add_opencl_benchmark(SSSP) 
-# add_opencl_benchmark(RadixSort)
-add_opencl_benchmark(ConjugateGradient)
 add_opencl_benchmark(FiniteDifferenceMethodsforPDEs)
-add_opencl_benchmark(JacobiGauss)
+add_opencl_benchmark(Jacobi)
 add_opencl_benchmark(MapReduce)
 add_opencl_benchmark(MonteCarlo)
-# add_opencl_benchmark(SmoothedParticleHydrodynamics)
 
 add_opencl_benchmark(DeviceInfo)
 

@@ -24,13 +24,12 @@ function(add_sycl_benchmark name)
     )
 endfunction()
 
-add_sycl_benchmark(ConjugateGradient) # not working
-add_sycl_benchmark(sycl) # not working
-# add_sycl_benchmark(FiniteDifferenceMethodsforPDEs)
-# add_sycl_benchmark(JacobiGauss)
-# add_sycl_benchmark(MapReduce)
-# add_sycl_benchmark(MonteCarlo)
-# add_sycl_benchmark(PageRank)
+add_sycl_benchmark(sycl)
+add_sycl_benchmark(FiniteDifferenceMethodsforPDEs)
+add_sycl_benchmark(Jacobi)
+add_sycl_benchmark(MapReduce)
+add_sycl_benchmark(MonteCarlo)
+add_sycl_benchmark(PageRank)
 
 else()
     set(CMAKE_CXX_COMPILER "${ONEAPI_ROOT}/compiler/latest/linux/bin/icpx")
