@@ -24,13 +24,18 @@ int main() {
         std::cout << "Running OpenACC Monte Carlo simulation to estimate Pi..." << std::endl;
         auto startTime = std::chrono::high_resolution_clock::now();
 
-        #pragma acc data copyin(random_x[0:num_points], random_y[0:num_points])
-        #pragma acc parallel loop reduction(+:count)
-        for (int i = 0; i < num_points; ++i) {
-            float x = random_x[i];
-            float y = random_y[i];
-            if (x * x + y * y <= 1.0f) {
-                count++;
+        float* x_ptr = random_x.data();
+        float* y_ptr = random_y.data();
+
+        #pragma acc data copyin(x_ptr[0:num_points], y_ptr[0:num_points])
+        {
+            #pragma acc parallel loop reduction(+:count)
+            for (int i = 0; i < num_points; ++i) {
+                float x = x_ptr[i];
+                float y = y_ptr[i];
+                if (x * x + y * y <= 1.0f) {
+                    count++;
+                }
             }
         }
 

@@ -1,6 +1,6 @@
 # It is possibleto run it using NVIDIA HPC SDK
 # Download docker pull nvcr.io/nvidia/nvhpc:25.7-devel-cuda12.9-ubuntu22.04
-# Run docker run --rm -it --gpus all -w /work nvcr.io/nvidia/nvhpc:25.7-devel-cuda12.9-ubuntu22.04 bash
+# In Benchmark-GPU directory, run docker run --rm -it --gpus all -v .:/work -w /work nvcr.io/nvidia/nvhpc:25.7-devel-cuda12.9-ubuntu22.04 bash
 
 find_package(OpenACC REQUIRED)
 

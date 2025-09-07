@@ -30,16 +30,30 @@ int main() {
         std::cout << "Running OpenACC heat equation solver..." << std::endl;
         auto startTime = std::chrono::high_resolution_clock::now();
 
-        #pragma acc data copy(u[0:Nx]) create(u_next[0:Nx])
-        for (int n = 0; n < Nt; ++n) {
-            #pragma acc parallel loop
-            for (int i = 1; i < Nx - 1; ++i) {
-                u_next[i] = u[i] + r * (u[i + 1] - 2 * u[i] + u[i - 1]);
-            }
+        double* u_ptr = u.data();
+        double* u_next_ptr = u_next.data();
 
-            #pragma acc parallel loop
-            for (int i = 0; i < Nx; ++i) {
-                u[i] = u_next[i];
+        #pragma acc data copy(u_ptr[0:Nx]) create(u_next_ptr[0:Nx])
+        {
+            for (int n = 0; n < Nt; ++n) {
+                #pragma acc parallel loop present(u_ptr, u_next_ptr)
+                for (int i = 1; i < Nx - 1; ++i) {
+                    u_next_ptr[i] = u_ptr[i] + r * (u_ptr[i + 1] - 2 * u_ptr[i] + u_ptr[i - 1]);
+                }
+
+                // Set boundary conditions
+                #pragma acc parallel loop present(u_next_ptr)
+                for (int i = 0; i < Nx; ++i) {
+                    if (i == 0 || i == Nx - 1) {
+                        u_next_ptr[i] = 0.0;
+                    }
+                }
+
+                // Swap arrays
+                #pragma acc parallel loop present(u_ptr, u_next_ptr)
+                for (int i = 0; i < Nx; ++i) {
+                    u_ptr[i] = u_next_ptr[i];
+                }
             }
         }
 
