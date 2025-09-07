@@ -1,3 +1,5 @@
+if(NOT WIN32)
+
 # Find oneAPI installation
 if(NOT DEFINED ONEAPI_ROOT)
     if(DEFINED ENV{ONEAPI_ROOT})
@@ -46,4 +48,6 @@ else()
         PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     )
+endif()
+
 endif()

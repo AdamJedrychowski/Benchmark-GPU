@@ -1,14 +1,23 @@
 include(ExternalProject)
 
-ExternalProject_Add(OpenCL-build
-GIT_REPOSITORY https://github.com/KhronosGroup/OpenCL-SDK.git
-    GIT_TAG v2023.04.17
-    GIT_SHALLOW ON
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -D BUILD_TESTING=OFF -D BUILD_DOCS=OFF -D OPENCL_SDK_BUILD_SAMPLES=OFF
-    # BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
-)
+if (WIN32)
+    ExternalProject_Add(OpenCL-build
+    GIT_REPOSITORY https://github.com/KhronosGroup/OpenCL-SDK.git
+        GIT_TAG v2023.04.17
+        GIT_SHALLOW ON
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -D BUILD_TESTING=OFF -D BUILD_DOCS=OFF -D OPENCL_SDK_BUILD_SAMPLES=OFF
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ""
+    )
+else()
+    ExternalProject_Add(OpenCL-build
+    GIT_REPOSITORY https://github.com/KhronosGroup/OpenCL-SDK.git
+        GIT_TAG v2023.04.17
+        GIT_SHALLOW ON
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -D BUILD_TESTING=OFF -D BUILD_DOCS=OFF -D OPENCL_SDK_BUILD_SAMPLES=OFF
+        BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release
+    )
+endif()
 ExternalProject_Get_Property(OpenCL-build INSTALL_DIR)
 
 set(opencl_install_dir ${INSTALL_DIR})

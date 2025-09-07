@@ -153,18 +153,6 @@ int main() {
         } else {
             std::cout << "\nTotal devices found: " << deviceCount << std::endl;
         }
-        
-        // Test with default queue
-        std::cout << "\n--- Testing Default Queue ---\n";
-        sycl::queue default_queue;
-        default_queue.
-
-
-        std::cout << "Default device: " 
-                  << default_queue.get_device().get_info<sycl::info::device::name>() << std::endl;
-        
-        std::cout << "\nSYCL device enumeration completed successfully!" << std::endl;
-        
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
