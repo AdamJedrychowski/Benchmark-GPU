@@ -4,7 +4,7 @@
 #include <chrono>
 #include <algorithm>
 #include <numeric>
-#include <omp.h>
+#include <openacc.h>
 #include "../Matrix.h"
 
 class Graph {
@@ -92,43 +92,48 @@ int main() {
         std::vector<float> inRank(numNodes, 1.0f / numNodes);
         std::vector<float> outRank(numNodes);
 
-        std::cout << "Starting OpenMP PageRank computation..." << std::endl;
+        std::cout << "Starting OpenACC PageRank computation..." << std::endl;
 
         auto startTime = std::chrono::high_resolution_clock::now();
 
-        for (int iter = 0; iter < maxIterations; iter++) {
-            #pragma omp parallel for
-            for (int nodeId = 0; nodeId < numNodes; nodeId++) {
-                float sum = 0.0f;
+        // Copy data to GPU
+        #pragma acc data copyin(nodeOffsets[0:numNodes+1], nodeConnections[0:nodeConnections.size()], outDegrees[0:numNodes]) \
+                         copy(inRank[0:numNodes]) create(outRank[0:numNodes])
+        {
+            for (int iter = 0; iter < maxIterations; iter++) {
+                #pragma acc parallel loop
+                for (int nodeId = 0; nodeId < numNodes; nodeId++) {
+                    float sum = 0.0f;
 
-                int start = nodeOffsets[nodeId];
-                int end = nodeOffsets[nodeId + 1];
+                    int start = nodeOffsets[nodeId];
+                    int end = nodeOffsets[nodeId + 1];
 
-                for (int i = start; i < end; i++) {
-                    int sourceNode = nodeConnections[i];
-                    if (outDegrees[sourceNode] > 0) {
-                        sum += inRank[sourceNode] / outDegrees[sourceNode];
-                    } else {
-                        sum += inRank[sourceNode] / numNodes;
+                    for (int i = start; i < end; i++) {
+                        int sourceNode = nodeConnections[i];
+                        if (outDegrees[sourceNode] > 0) {
+                            sum += inRank[sourceNode] / outDegrees[sourceNode];
+                        } else {
+                            sum += inRank[sourceNode] / numNodes;
+                        }
                     }
+
+                    outRank[nodeId] = (1.0f - dampingFactor) / numNodes + dampingFactor * sum;
                 }
 
-                outRank[nodeId] = (1.0f - dampingFactor) / numNodes + dampingFactor * sum;
-            }
-
-            float diff = 0.0f;
-            #pragma omp parallel for reduction(+:diff)
-            for (int i = 0; i < numNodes; i++) {
-                diff += std::abs(outRank[i] - inRank[i]);
-                inRank[i] = outRank[i];
+                float diff = 0.0f;
+                #pragma acc parallel loop reduction(+:diff)
+                for (int i = 0; i < numNodes; i++) {
+                    diff += std::abs(outRank[i] - inRank[i]);
+                    inRank[i] = outRank[i];
+                }
             }
         }
 
         auto endTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration = endTime - startTime;
 
-        std::cout << "OpenMP PageRank completed in " << duration.count() << " seconds." << std::endl;
-        saveDurationToFile("results/PageRank/OpenMP.txt", numNodes, duration.count());
+        std::cout << "OpenACC PageRank completed in " << duration.count() << " seconds." << std::endl;
+        saveDurationToFile("results/PageRank/OpenACC.txt", numNodes, duration.count());
     }
 
     return 0;

@@ -96,11 +96,6 @@ private:
 };
 
 void saveDurationToFile(const std::string &filename, double x, double duration) {
-    std::filesystem::path destPath(filename);
-    if(!std::filesystem::exists(destPath.parent_path())) {
-        std::filesystem::create_directories(destPath.parent_path());
-    }
-
     std::ofstream file(filename, std::ios::app);
     if (!file) {
         std::cerr << "Error opening file: " << filename << std::endl;

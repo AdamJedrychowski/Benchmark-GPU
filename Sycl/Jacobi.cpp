@@ -69,7 +69,11 @@ int main() {
                     break;
                 }
 
-                std::swap(bufferX, bufferXNew);
+                queue.submit([&](sycl::handler& h) {
+                    auto x_acc = bufferX.get_access<sycl::access::mode::write>(h);
+                    auto x_new_acc = bufferXNew.get_access<sycl::access::mode::read>(h);
+                    h.copy(x_new_acc, x_acc);
+                });
             }
 
             auto endTime = std::chrono::high_resolution_clock::now();

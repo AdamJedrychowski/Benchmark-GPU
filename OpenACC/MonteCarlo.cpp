@@ -2,7 +2,7 @@
 #include <vector>
 #include <random>
 #include <chrono>
-#include <omp.h>
+#include <openacc.h>
 #include "../Matrix.h"
 
 int main() {
@@ -21,10 +21,11 @@ int main() {
             random_y[i] = dist(rng);
         }
 
-        std::cout << "Running OpenMP Monte Carlo simulation to estimate Pi..." << std::endl;
+        std::cout << "Running OpenACC Monte Carlo simulation to estimate Pi..." << std::endl;
         auto startTime = std::chrono::high_resolution_clock::now();
 
-        #pragma omp parallel for reduction(+:count)
+        #pragma acc data copyin(random_x[0:num_points], random_y[0:num_points])
+        #pragma acc parallel loop reduction(+:count)
         for (int i = 0; i < num_points; ++i) {
             float x = random_x[i];
             float y = random_y[i];
@@ -35,8 +36,8 @@ int main() {
 
         auto endTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration = endTime - startTime;
-        std::cout << "OpenMP Monte Carlo completed in " << duration.count() << " seconds." << std::endl;
-        saveDurationToFile("results/MonteCarlo/OpenMP.txt", num_points, duration.count());
+        std::cout << "OpenACC Monte Carlo completed in " << duration.count() << " seconds." << std::endl;
+        saveDurationToFile("results/MonteCarlo/OpenACC.txt", num_points, duration.count());
 
         float pi = 4.0f * count / num_points;
         std::cout << "Estimated value of Pi: " << pi << std::endl;

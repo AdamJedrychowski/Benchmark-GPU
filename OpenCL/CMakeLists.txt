@@ -51,5 +51,3 @@ add_opencl_benchmark(MapReduce)
 add_opencl_benchmark(MonteCarlo)
 
 add_opencl_benchmark(DeviceInfo)
-
-add_subdirectory(HeiderBalance)

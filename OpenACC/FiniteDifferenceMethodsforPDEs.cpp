@@ -3,7 +3,7 @@
 #include <vector>
 #include <cmath>
 #include <chrono>
-#include <omp.h>
+#include <openacc.h>
 #include "../Matrix.h"
 
 int main() {
@@ -27,15 +27,17 @@ int main() {
             u[i] = sin(M_PI * x);
         }
 
-        std::cout << "Running OpenMP heat equation solver..." << std::endl;
+        std::cout << "Running OpenACC heat equation solver..." << std::endl;
         auto startTime = std::chrono::high_resolution_clock::now();
 
+        #pragma acc data copy(u[0:Nx]) create(u_next[0:Nx])
         for (int n = 0; n < Nt; ++n) {
-            #pragma omp parallel for
+            #pragma acc parallel loop
             for (int i = 1; i < Nx - 1; ++i) {
                 u_next[i] = u[i] + r * (u[i + 1] - 2 * u[i] + u[i - 1]);
             }
 
+            #pragma acc parallel loop
             for (int i = 0; i < Nx; ++i) {
                 u[i] = u_next[i];
             }
@@ -43,8 +45,8 @@ int main() {
 
         auto endTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration = endTime - startTime;
-        std::cout << "OpenMP heat equation solver completed in " << duration.count() << " seconds." << std::endl;
-        saveDurationToFile("results/FiniteDifferenceMethodsforPDEs/OpenMP.txt", Nt, duration.count());
+        std::cout << "OpenACC heat equation solver completed in " << duration.count() << " seconds." << std::endl;
+        saveDurationToFile("results/FiniteDifferenceMethodsforPDEs/OpenACC.txt", Nt, duration.count());
     }
 
     return 0;
