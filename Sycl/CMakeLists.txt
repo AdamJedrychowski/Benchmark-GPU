@@ -1,4 +1,4 @@
-if(NOT WIN32)
+if(WIN32)
 
 # Find oneAPI installation
 if(NOT DEFINED ONEAPI_ROOT)
