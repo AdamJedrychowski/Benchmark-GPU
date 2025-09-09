@@ -20,15 +20,10 @@ const char* kernelSource = R"(
         localData[localId] = data[id];
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        int prevOffset = groupSize;
         // Perform reduction in local memory
         for (int offset = groupSize / 2; offset > 0; offset /= 2) {
             if (localId < offset) {
-                if(localId == offset - 1 && offset*2 != prevOffset) {
-                    localData[localId] += localData[localId + offset + 1];
-                }
                 localData[localId] += localData[localId + offset];
-                prevOffset = offset;
             }
             barrier(CLK_LOCAL_MEM_FENCE);
         }

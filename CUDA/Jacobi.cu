@@ -24,7 +24,7 @@ int main() {
     
     int maxIterations = 1000;
     float tolerance = 1e-6;
-    std::vector<int> sizes = {1250, 2500, 5000, 10000, 20000, 40000};
+    std::vector<int> sizes = {1250, 2500, 5000, 10000, 20000}; // , 40000
 
     for(int &n : sizes) {
         Matrix<float> A(n);
