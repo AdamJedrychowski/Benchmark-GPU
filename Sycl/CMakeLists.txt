@@ -17,8 +17,8 @@ endif()
 if(WIN32)
 function(add_sycl_benchmark name)
     add_custom_target(${name}SYCL ALL
-        COMMAND cmd /c "icpx -fsycl -fsycl-targets=nvptx64-nvidia-cuda -std=c++17 -L \"C:/Program Files (x86)/Intel/oneAPI/compiler/latest/lib\" -O3 -DNDEBUG -o ${CMAKE_BINARY_DIR}/bin/Release/${name}SYCL.exe ${name}.cpp"
-        COMMAND cmd /c "echo ${CMAKE_BINARY_DIR}/bin/Debug/${name}SYCL.exe"
+        COMMAND cmd /c "icpx -fsycl -fsycl-targets=nvptx64-nvidia-cuda -std=c++17 -L \"C:/Program Files (x86)/Intel/oneAPI/compiler/latest/lib\" -o ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/${name}SYCL.exe ${name}.cpp"
+        COMMAND cmd /c "echo ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/${name}SYCL.exe"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Building SYCL with Intel oneAPI"
         SOURCES ${name}.cpp ../Matrix.h
