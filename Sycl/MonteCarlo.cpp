@@ -9,7 +9,7 @@ int main() {
     std::vector<int> num_points_list = {62500000, 125000000, 250000000, 500000000, 1000000000, 2000000000}; 
     
     try {
-        sycl::queue queue{sycl::gpu_selector_v};
+        sycl::queue queue{sycl::gpu_selector{}};
         
         std::cout << "Running on device: " 
                   << queue.get_device().get_info<sycl::info::device::name>() << std::endl;
@@ -38,9 +38,7 @@ int main() {
                 
                 auto count_reducer = sycl::reduction(buffer_count, h, sycl::plus<int>());
                 
-                h.parallel_for(sycl::range<1>(num_points), 
-                    count_reducer,
-                    [=](sycl::id<1> idx, auto& sum) {
+                h.parallel_for(sycl::range<1>(num_points), count_reducer, [=](sycl::id<1> idx, auto& sum) {
                         int id = idx[0];
                         float x = acc_x[id];
                         float y = acc_y[id];

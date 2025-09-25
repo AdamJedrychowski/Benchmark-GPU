@@ -85,7 +85,7 @@ int main() {
     
     try {
         // Create SYCL queue with GPU selector
-        sycl::queue q(sycl::gpu_selector_v);
+        sycl::queue q(sycl::gpu_selector{});
         
         std::cout << "Using device: " << q.get_device().get_info<sycl::info::device::name>() << std::endl;
 

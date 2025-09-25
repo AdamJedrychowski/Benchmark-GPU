@@ -8,7 +8,7 @@
 
 int main() {
     try {
-        sycl::queue queue{sycl::gpu_selector_v};
+        sycl::queue queue{sycl::gpu_selector{}};
         std::cout << "Running on device: " << queue.get_device().get_info<sycl::info::device::name>() << std::endl;
         std::vector<int> sizes = {33554432, 67108864, 134217728, 268435456, 536870912, 1073741824};
 
